@@ -30,33 +30,38 @@
 
 #include "diff.h"
 
-struct 	coord {
+struct 	onp_coord {
 	int		 x;
 	int		 y;
 	int		 k;
 };
 
 struct 	onp_diff {
-	onp_sequence_t	*a;
-	onp_sequence_t	*b;
-	size_t		 m;
-	size_t	 	 n;
-	int		*path;
-	size_t	 	 delta;
-	size_t	 	 offset;
-	size_t	 	 size;
-	size_t	 	 editdis;
-	struct coord	*pathcoords;
-	size_t		 pathcoordsz;
-	int 		 swapped;
-	struct diff	*result;
+	const void	 *a; /* shorter subsequence */
+	const void	 *b; /* longer subsequence */
+	size_t		  m; /* length of "a" */
+	size_t	 	  n; /* length of "b" */
+	diff_cmp	  cmp; /* comparison function */
+	int		 *path;
+	size_t	 	  delta;
+	size_t	 	  offset;
+	size_t	 	  size; /* matrix size */
+	size_t		  sz; /* data element width */
+	struct onp_coord *pathcoords;
+	size_t		  pathcoordsz;
+	int 		  swapped; /* seqs swapped from input */
+	struct diff	 *result;
 };
+
+#define ONP_CMP(_d, _o1, _o2) \
+	((_d)->cmp((_d)->a + (_d)->sz * (_o1), \
+	           (_d)->b + (_d)->sz * (_o2)))
 
 /*
  * Search shortest path and record the path.
  */
 static int 
-snake(struct onp_diff *diff, int k, int above, int below) 
+onp_snake(struct onp_diff *diff, int k, int above, int below) 
 {
 	int 	 r, y, x;
 	void	*pp;
@@ -69,8 +74,7 @@ snake(struct onp_diff *diff, int k, int above, int below)
 		diff->path[k + 1 + diff->offset];
 
 	while (x < (int)diff->m && y < (int)diff->n && 
-	       (diff->swapped ? diff->b[y] == diff->a[x] :
-		diff->a[x] == diff->b[y])) {
+	       ONP_CMP(diff, x, y)) {
 		++x;
 		++y;
 	}
@@ -80,7 +84,7 @@ snake(struct onp_diff *diff, int k, int above, int below)
 	pp = reallocarray
 		(diff->pathcoords,
 		 diff->pathcoordsz + 1,
-		 sizeof(struct coord));
+		 sizeof(struct onp_coord));
 	if (NULL == pp)
 		return -1;
 	diff->pathcoords = pp;
@@ -97,15 +101,15 @@ snake(struct onp_diff *diff, int k, int above, int below)
 }
 
 static int 
-addseq(struct onp_diff *diff, const onp_sequence_t *e, 
-	size_t beforeIdx, size_t afterIdx, enum edit type) 
+onp_addseq(struct onp_diff *diff, const void *e, 
+	size_t beforeIdx, size_t afterIdx, enum difft type) 
 {
 	void	*pp;
 
 	pp = reallocarray
 		(diff->result->ses,
 		 diff->result->sessz + 1,
-		 sizeof(struct sesent));
+		 sizeof(struct diff_ses));
 	if (NULL == pp)
 		return 0;
 	diff->result->ses = pp;
@@ -118,19 +122,18 @@ addseq(struct onp_diff *diff, const onp_sequence_t *e,
 }
 
 static int
-genseq(struct onp_diff *diff, const struct coord* v, size_t vsz) 
+onp_genseq(struct onp_diff *diff, const struct onp_coord* v, size_t vsz) 
 {
-	const onp_sequence_t	*x, *y;
-	size_t         	 x_idx,  y_idx;  /* line number */
-	int		 px_idx, py_idx; /* cordinates */
+	size_t		 xpos, ypos;
+	size_t         	 x_idx,  y_idx;  /* offset+1 numbers */
+	int		 px_idx, py_idx; /* coordinates */
 	int		 complete = 0;
 	int		 rc;
 	size_t		 i;
 
 	x_idx = y_idx = 1;
 	px_idx = py_idx = 0;
-	x = diff->a;
-	y = diff->b;
+	xpos = ypos = 0;
 
 	assert(vsz);
 
@@ -138,30 +141,36 @@ genseq(struct onp_diff *diff, const struct coord* v, size_t vsz)
 		while (px_idx < v[i].x || py_idx < v[i].y)
 			if (v[i].y - v[i].x > py_idx - px_idx) {
 				rc = ! diff->swapped ?
-					addseq(diff, y, 
-					 0, y_idx, EDIT_ADD) :
-					addseq(diff, y, 
-					 y_idx, 0, EDIT_DELETE);
-				++y;
+					onp_addseq(diff, 
+					 diff->b + (ypos * diff->sz),
+					 0, y_idx, DIFF_ADD) :
+					onp_addseq(diff, 
+					 diff->b + (ypos * diff->sz),
+					 y_idx, 0, DIFF_DELETE);
+				++ypos;
 				++y_idx;
 				++py_idx;
 			} else if (v[i].y - v[i].x < py_idx - px_idx) {
 				rc = ! diff->swapped ?
-					addseq(diff, x, 
-					 x_idx, 0, EDIT_DELETE) :
-					addseq(diff, x, 0, 
-					 x_idx, EDIT_ADD);
-				++x;
+					onp_addseq(diff, 
+					 diff->a + (xpos * diff->sz),
+					 x_idx, 0, DIFF_DELETE) :
+					onp_addseq(diff, 
+					 diff->a + (xpos * diff->sz),
+					 0, x_idx, DIFF_ADD);
+				++xpos;
 				++x_idx;
 				++px_idx;
 			} else {
 				rc = ! diff->swapped ?
-					addseq(diff, x, x_idx, 
-					 y_idx, EDIT_COMMON) :
-					addseq(diff, y, y_idx, 
-					 x_idx, EDIT_COMMON);
-				++x;
-				++y;
+					onp_addseq(diff, 
+					 diff->a + (xpos * diff->sz),
+					 x_idx, y_idx, DIFF_COMMON) :
+					onp_addseq(diff, 
+					 diff->b + (ypos * diff->sz),
+					 y_idx, x_idx, DIFF_COMMON);
+				++xpos;
+				++ypos;
 				++x_idx;
 				++y_idx;
 				++px_idx;
@@ -176,8 +185,9 @@ genseq(struct onp_diff *diff, const struct coord* v, size_t vsz)
 }
 
 static struct onp_diff *
-onp_alloc_diff(onp_sequence_t *a, size_t asz, 
-	onp_sequence_t *b, size_t bsz) 
+onp_alloc(diff_cmp cmp, size_t sz,
+	const void *a, size_t alen, 
+	const void *b, size_t blen) 
 {
 	struct onp_diff *diff;
 
@@ -186,21 +196,23 @@ onp_alloc_diff(onp_sequence_t *a, size_t asz,
 	if (NULL == diff)
 		return NULL;
 
-	if (asz > bsz) {
+	if (alen > blen) {
 		diff->a = b;
 		diff->b = a;
-		diff->m = bsz;
-		diff->n = asz;
+		diff->m = blen;
+		diff->n = alen;
 		diff->swapped = 1;
 	} else {
 		diff->a = a;
 		diff->b = b;
-		diff->m = asz;
-		diff->n = bsz;
+		diff->m = alen;
+		diff->n = blen;
 		diff->swapped = 0;
 	}
 
-	assert(diff->n >= diff->n);
+	assert(diff->n >= diff->m);
+	diff->cmp = cmp;
+	diff->sz = sz;
 	diff->delta = diff->n - diff->m;
 	diff->offset = diff->m + 1;
 	diff->size = diff->m + diff->n + 3;
@@ -209,7 +221,7 @@ onp_alloc_diff(onp_sequence_t *a, size_t asz,
 }
 
 static void 
-onp_free_diff(struct onp_diff *diff) 
+onp_free(struct onp_diff *diff) 
 {
 
 	free(diff->path);
@@ -225,7 +237,7 @@ onp_compose(struct onp_diff *diff, struct diff *result)
 	int		 k;
 	int		*fp = NULL;
 	int		 r;
-	struct coord	*epc = NULL;
+	struct onp_coord	*epc = NULL;
 	size_t		 epcsz = 0;
 	size_t		 i;
 	void		*pp;
@@ -252,7 +264,7 @@ onp_compose(struct onp_diff *diff, struct diff *result)
 		p++;
 		for (k = -p; 
 		     k <= (ssize_t)diff->delta - 1; k++) {
-			fp[k + diff->offset] = snake(diff, k, 
+			fp[k + diff->offset] = onp_snake(diff, k, 
 				fp[k - 1 + diff->offset] + 1, 
 				fp[k + 1 + diff->offset]);
 			if (fp[k + diff->offset] < 0)
@@ -260,7 +272,7 @@ onp_compose(struct onp_diff *diff, struct diff *result)
 		}
 		for (k = diff->delta + p; 
 		     k >= (ssize_t)diff->delta + 1; k--) {
-			fp[k + diff->offset] = snake(diff, k, 
+			fp[k + diff->offset] = onp_snake(diff, k, 
 				fp[k - 1 + diff->offset] + 1, 
 				fp[k + 1 + diff->offset]);
 			if (fp[k + diff->offset] < 0)
@@ -268,7 +280,7 @@ onp_compose(struct onp_diff *diff, struct diff *result)
 		}
 
 		fp[diff->delta + diff->offset] = 
-			snake(diff, diff->delta, 
+			onp_snake(diff, diff->delta, 
 				fp[diff->delta - 1 + diff->offset] + 1,
 				fp[diff->delta + 1 + diff->offset]);
 		if (fp[diff->delta + diff->offset] < 0)
@@ -277,7 +289,8 @@ onp_compose(struct onp_diff *diff, struct diff *result)
 
 	/* Now compute edit distance. */
 
-	diff->editdis = diff->delta + 2 * p;
+	assert(p >= 0);
+	diff->result->editdist = diff->delta + 2 * p;
 
 	/*
 	 * Here we compute the shortest edit script and the least common
@@ -289,7 +302,7 @@ onp_compose(struct onp_diff *diff, struct diff *result)
 	while(-1 != r) {
 		pp = reallocarray
 			(epc, epcsz + 1, 
-			 sizeof(struct coord));
+			 sizeof(struct onp_coord));
 		if (NULL == pp)
 			goto out;
 		epc = pp;
@@ -300,7 +313,7 @@ onp_compose(struct onp_diff *diff, struct diff *result)
 	}
 
 	if (epcsz)
-		genseq(diff, epc, epcsz);
+		onp_genseq(diff, epc, epcsz);
 
 	rc = 1;
 out:
@@ -310,8 +323,9 @@ out:
 }
 
 int
-diff(struct diff *d, onp_sequence_t *p1, size_t sz1, 
-	onp_sequence_t *p2, size_t sz2)
+diff(struct diff *d, diff_cmp cmp, size_t size,
+	const void *base1, size_t nmemb1, 
+	const void *base2, size_t nmemb2)
 {
 	struct onp_diff	*p;
 	int		 rc;
@@ -321,12 +335,12 @@ diff(struct diff *d, onp_sequence_t *p1, size_t sz1,
 
 	memset(d, 0, sizeof(struct diff));
 
-	p = onp_alloc_diff(p1, sz1, p2, sz2);
+	p = onp_alloc(cmp, size, base1, nmemb1, base2, nmemb2);
 	if (NULL == p)
 		return -1;
 
 	rc = onp_compose(p, d);
-	onp_free_diff(p);
+	onp_free(p);
 
 	if (0 == rc) {
 		free(d->ses);

@@ -25,27 +25,28 @@
 #ifndef SES_H
 #define SES_H
 
-typedef char onp_sequence_t;
+typedef	int (*diff_cmp)(const void *, const void *);
 
-enum 	edit {
-	EDIT_ADD,
-	EDIT_DELETE,
-	EDIT_COMMON
+enum 	difft {
+	DIFF_ADD,
+	DIFF_DELETE,
+	DIFF_COMMON
 };
 
-struct	sesent {
-	int		 beforeIdx;
-	int	 	 afterIdx;
-	enum edit	 type;
-	const onp_sequence_t *e;
+struct	diff_ses {
+	size_t		 beforeIdx;
+	size_t	 	 afterIdx;
+	enum difft	 type;
+	const void	*e;
 };
 
 struct	diff {
-	struct sesent	*ses;
-	size_t		 sessz;
+	struct diff_ses	*ses;
+	size_t	    	 sessz;
+	size_t		 editdist;
 };
 
-int	diff(struct diff *, onp_sequence_t *, 
-		size_t, onp_sequence_t *, size_t);
+int	diff(struct diff *, diff_cmp, size_t, 
+		const void *, size_t, const void *, size_t);
 
 #endif /* ! SES_H */
