@@ -8,7 +8,8 @@ DOTAR	 = LICENSE.md \
 	   diff.3 \
 	   diff.c \
 	   diff.h \
-	   main.c \
+	   diffchars.c \
+	   diffwords.c \
 	   tests.c
 WWWDIR	 = /var/www/vhosts/kristaps.bsd.lv/htdocs/libdiff
 
