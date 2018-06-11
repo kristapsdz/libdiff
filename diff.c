@@ -138,7 +138,7 @@ onp_genseq(struct onp_diff *diff, const struct onp_coord* v, size_t vsz)
 	assert(vsz);
 
 	for (i = vsz - 1; ! complete; --i) {
-		while (px_idx < v[i].x || py_idx < v[i].y)
+		while (px_idx < v[i].x || py_idx < v[i].y) {
 			if (v[i].y - v[i].x > py_idx - px_idx) {
 				rc = ! diff->swapped ?
 					onp_addseq(diff, 
@@ -176,8 +176,9 @@ onp_genseq(struct onp_diff *diff, const struct onp_coord* v, size_t vsz)
 				++px_idx;
 				++py_idx;
 			}
-		if ( ! rc)
-			return -1;
+			if ( ! rc)
+				return -1;
+		}
 		complete = 0 == i;
 	}
 
