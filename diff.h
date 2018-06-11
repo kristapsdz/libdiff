@@ -34,10 +34,10 @@ enum 	difft {
 };
 
 struct	diff_ses {
-	size_t		 beforeIdx;
-	size_t	 	 afterIdx;
-	enum difft	 type;
-	const void	*e;
+	size_t		 originIdx; /* if >0, index+1 in origin array */
+	size_t	 	 targetIdx; /* if >0, index+1 in target array */
+	enum difft	 type; /* type of edit */
+	const void	*e; /* pointer to object */
 };
 
 struct	diff {

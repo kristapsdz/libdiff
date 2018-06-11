@@ -102,7 +102,7 @@ onp_snake(struct onp_diff *diff, int k, int above, int below)
 
 static int 
 onp_addseq(struct onp_diff *diff, const void *e, 
-	size_t beforeIdx, size_t afterIdx, enum difft type) 
+	size_t originIdx, size_t targetIdx, enum difft type) 
 {
 	void	*pp;
 
@@ -113,8 +113,8 @@ onp_addseq(struct onp_diff *diff, const void *e,
 	if (NULL == pp)
 		return 0;
 	diff->result->ses = pp;
-	diff->result->ses[diff->result->sessz].beforeIdx = beforeIdx;
-	diff->result->ses[diff->result->sessz].afterIdx = afterIdx;
+	diff->result->ses[diff->result->sessz].originIdx = originIdx;
+	diff->result->ses[diff->result->sessz].targetIdx = targetIdx;
 	diff->result->ses[diff->result->sessz].type = type;
 	diff->result->ses[diff->result->sessz].e = e;
 	diff->result->sessz++;
