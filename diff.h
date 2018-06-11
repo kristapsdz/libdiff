@@ -22,8 +22,8 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-#ifndef SES_H
-#define SES_H
+#ifndef DIFF_H
+#define DIFF_H
 
 typedef	int (*diff_cmp)(const void *, const void *);
 
@@ -41,12 +41,14 @@ struct	diff_ses {
 };
 
 struct	diff {
-	struct diff_ses	*ses;
-	size_t	    	 sessz;
-	size_t		 editdist;
+	const void	**lcs; /* longest common subsequence */
+	size_t		  lcssz;
+	struct diff_ses	 *ses; /* shortest edit script */
+	size_t	    	  sessz;
+	size_t		  editdist; /* edit distance */
 };
 
 int	diff(struct diff *, diff_cmp, size_t, 
 		const void *, size_t, const void *, size_t);
 
-#endif /* ! SES_H */
+#endif /* ! DIFF_H */

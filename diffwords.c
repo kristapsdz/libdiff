@@ -81,13 +81,21 @@ main(int argc, char *argv[])
 	if (0 == rc)
 		errx(EXIT_FAILURE, "cannot compute difference");
 
+	puts("Shortest edit script:");
 	for (i = 0; i < p.sessz; i++)
 		printf("%s%s\n",
 			DIFF_ADD == p.ses[i].type ?  "+" :
 			DIFF_DELETE == p.ses[i].type ?  "-" : " ",
 			*(const char **)p.ses[i].e);
 
+	puts("Longest common subsequence:");
+	for (i = 0; i < p.lcssz; i++)
+		printf(" %s\n", *(const char **)p.lcs[i]);
+
+	printf("Edit distance: %zu\n", p.editdist);
+
 	free(p.ses);
+	free(p.lcs);
 	free(origin);
 	free(target);
 	return EXIT_SUCCESS;

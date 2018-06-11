@@ -101,7 +101,24 @@ onp_snake(struct onp_diff *diff, int k, int above, int below)
 }
 
 static int 
-onp_addseq(struct onp_diff *diff, const void *e, 
+onp_addlcs(struct onp_diff *diff, const void *e)
+{
+	void	*pp;
+
+	pp = reallocarray
+		(diff->result->lcs,
+		 diff->result->lcssz + 1,
+		 sizeof(void *));
+	if (NULL == pp)
+		return 0;
+	diff->result->lcs = pp;
+	diff->result->lcs[diff->result->lcssz] = e;
+	diff->result->lcssz++;
+	return 1;
+}
+
+static int 
+onp_addses(struct onp_diff *diff, const void *e, 
 	size_t originIdx, size_t targetIdx, enum difft type) 
 {
 	void	*pp;
@@ -141,10 +158,10 @@ onp_genseq(struct onp_diff *diff, const struct onp_coord* v, size_t vsz)
 		while (px_idx < v[i].x || py_idx < v[i].y) {
 			if (v[i].y - v[i].x > py_idx - px_idx) {
 				rc = ! diff->swapped ?
-					onp_addseq(diff, 
+					onp_addses(diff, 
 					 diff->b + (ypos * diff->sz),
 					 0, y_idx, DIFF_ADD) :
-					onp_addseq(diff, 
+					onp_addses(diff, 
 					 diff->b + (ypos * diff->sz),
 					 y_idx, 0, DIFF_DELETE);
 				++ypos;
@@ -152,10 +169,10 @@ onp_genseq(struct onp_diff *diff, const struct onp_coord* v, size_t vsz)
 				++py_idx;
 			} else if (v[i].y - v[i].x < py_idx - px_idx) {
 				rc = ! diff->swapped ?
-					onp_addseq(diff, 
+					onp_addses(diff, 
 					 diff->a + (xpos * diff->sz),
 					 x_idx, 0, DIFF_DELETE) :
-					onp_addseq(diff, 
+					onp_addses(diff, 
 					 diff->a + (xpos * diff->sz),
 					 0, x_idx, DIFF_ADD);
 				++xpos;
@@ -163,12 +180,18 @@ onp_genseq(struct onp_diff *diff, const struct onp_coord* v, size_t vsz)
 				++px_idx;
 			} else {
 				rc = ! diff->swapped ?
-					onp_addseq(diff, 
+					onp_addses(diff, 
 					 diff->a + (xpos * diff->sz),
 					 x_idx, y_idx, DIFF_COMMON) :
-					onp_addseq(diff, 
+					onp_addses(diff, 
 					 diff->b + (ypos * diff->sz),
 					 y_idx, x_idx, DIFF_COMMON);
+				if (rc)
+					rc = ! diff->swapped ?
+					  onp_addlcs(diff, diff->a + 
+						(xpos * diff->sz)) :
+					  onp_addlcs(diff, diff->b + 
+						(ypos * diff->sz));
 				++xpos;
 				++ypos;
 				++x_idx;

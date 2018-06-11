@@ -63,12 +63,19 @@ It returns zero if the objects are the same, non-zero otherwise.
 .Pp
 On success,
 .Fn diff
-allocates the
+sets the edit distance in
+.Fa p->editdist .
+It allocates the
 .Fa p->ses
 array of length
 .Fa p->sessz
 and fills it with the shortest common subsequence.
-This array must be passed to
+It also allocates the
+.Fa p->lcs
+array of length
+.Fa p->lcssz
+and fills it with the longest common subsequence.
+Both arrays must be passed to
 .Xr free 3
 by the caller.
 .Sh RETURN VALUES
@@ -111,6 +118,7 @@ void compute(void) {
             DIFF_DELETE == p.ses[i].type ?  "-" : " ",
             *(const char *)p.ses[i].e);
     free(p.ses);
+    free(p.lcs);
 }
 .Ed
 .Pp
@@ -141,6 +149,7 @@ void compute(void) {
             DIFF_DELETE == p.ses[i].type ?  "-" : " ",
             *(const char **)p.ses[i].e);
     free(p.ses);
+    free(p.lcs);
 }
 .Ed
 .\" .Sh DIAGNOSTICS
