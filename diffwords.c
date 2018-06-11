@@ -84,12 +84,8 @@ main(int argc, char *argv[])
 
 	if (rc < 0)
 		err(EXIT_FAILURE, NULL);
-
-	if (0 == rc) {
-		free(origin);
-		free(target);
-		return EXIT_FAILURE;
-	}
+	if (0 == rc)
+		errx(EXIT_FAILURE, "cannot compute difference");
 
 	for (i = 0; i < p.sessz; i++)
 		printf("%s%s\n",
@@ -100,6 +96,5 @@ main(int argc, char *argv[])
 	free(p.ses);
 	free(origin);
 	free(target);
-
 	return EXIT_SUCCESS;
 }

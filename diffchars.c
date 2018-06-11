@@ -59,7 +59,7 @@ main(int argc, char *argv[])
 	if (rc < 0)
 		err(EXIT_FAILURE, NULL);
 	if (0 == rc)
-		return EXIT_FAILURE;
+		errx(EXIT_FAILURE, "cannot compute difference");
 
 	for (i = 0; i < p.sessz; i++)
 		printf("%s%c\n",
