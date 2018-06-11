@@ -45,6 +45,8 @@ tokenise(char *input, char ***out, size_t *outsz)
 	char	*cp;
 
 	while (NULL != (cp = strsep(&input, " "))) {
+		if ('\0' == *cp)
+			continue;
 		*out = reallocarray
 			(*out, *outsz + 1, sizeof(char *));
 		if (NULL == *out)
