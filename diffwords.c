@@ -36,7 +36,6 @@ static int
 word_cmp(const void *p1, const void *p2)
 {
 
-	warnx("%s, %s", *(const char **)p1, *(const char **)p2);
 	return 0 == strcmp(*(const char **)p1, *(const char **)p2);
 }
 
@@ -72,11 +71,6 @@ main(int argc, char *argv[])
 
 	tokenise(argv[1], &origin, &originsz);
 	tokenise(argv[2], &target, &targetsz);
-
-	for (i = 0; i < originsz; i++)
-		fprintf(stderr, "origin: %s\n", origin[i]);
-	for (i = 0; i < targetsz; i++)
-		fprintf(stderr, "target: %s\n", target[i]);
 
 	rc = diff(&p, word_cmp, sizeof(char *), 
 		origin, originsz,
